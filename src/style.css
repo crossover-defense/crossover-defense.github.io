@@ -92,3 +92,30 @@ footer { margin-top: 0; padding-top: 7px; }
   .battle-overlay.ready p { display: none; }
   .battle-overlay.ready h2 { font-size: 14px; margin: 5px 0; }
 }
+
+/* 드래그 중 스크롤/텍스트 선택을 막고 Pointer Capture로 카드 밖의 터치도 추적합니다. */
+.pokemon-card { touch-action: none; user-select: none; -webkit-user-select: none; cursor: grab; }
+.pokemon-card:active { cursor: grabbing; }
+.placing #game { cursor: crosshair; }
+.battle-overlay.placement-hidden { display: none; }
+.placement-ghost { position: fixed; z-index: 30; width: 90px; pointer-events: none; transform: translate(-50%, -110%); text-align: center; filter: drop-shadow(0 5px 6px #000a); }
+.placement-ghost svg { display: block; width: 90px; height: 84px; }
+.placement-ghost strong { display: block; color: #f2d59c; background: #15232de6; font-size: 12px; padding: 4px; border: 1px solid #e9d09a; }
+/* 방향 대기 중 맵 입력을 가립니다. 실제 배치 판정은 확정 때 한 번만 실행합니다. */
+.placement-overlay { position: absolute; inset: 0; z-index: 5; background: #07121c4d; touch-action: none; user-select: none; }
+.placement-compass { position: absolute; width: clamp(112px, 22vh, 164px); aspect-ratio: 1; transform: translate(-50%, -50%); border: 1px solid #d9c99799; border-radius: 50%; background: radial-gradient(circle, #20343bd9 0 28%, #15212a99 29% 69%, #d8c49466 70% 71%, transparent 72%); touch-action: none; cursor: crosshair; }
+.direction-origin { position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%); display: flex; flex-direction: column; align-items: center; color: #f3d99c; pointer-events: none; }
+.direction-origin span { font-size: 23px; }
+.direction-origin small { font-size: 8px; letter-spacing: .12em; }
+.placement-compass .facing { position: absolute; width: 30px; height: 30px; padding: 0; border: 0; background: #1b303ccc; font-size: 21px; line-height: 1; color: #d1dedb; }
+.facing.north { left: calc(50% - 15px); top: 3px; }
+.facing.south { left: calc(50% - 15px); bottom: 3px; }
+.facing.west { top: calc(50% - 15px); left: 3px; }
+.facing.east { top: calc(50% - 15px); right: 3px; }
+.placement-compass[data-facing=north] .north, .placement-compass[data-facing=south] .south,
+.placement-compass[data-facing=east] .east, .placement-compass[data-facing=west] .west { color: #17252d; background: #f0d29b; box-shadow: 0 0 18px #f0d29b77; }
+.placement-cancel { position: absolute; right: 0; top: 0; z-index: 1; width: 32px; height: 32px; padding: 0; border: 1px solid #f6ad9a; border-radius: 50%; background: #8a4237; color: #fff2e5; font-size: 26px; line-height: 1; cursor: pointer; }
+#placement-hint { position: absolute; top: calc(50% + 19px); left: 50%; transform: translateX(-50%); width: max-content; max-width: 180px; font-size: 10px; color: #f2d99f; padding: 3px 5px; margin: 0; background: #14232de6; pointer-events: none; }
+@media(max-height:480px) { .placement-compass { width: 112px; } #placement-hint { font-size: 8px; } }
+/* X는 방향 원과 분리하여 작은 창/가장자리 타일에서도 항상 접근 가능하게 고정합니다. */
+.placement-overlay > .placement-cancel { top: 10px; right: 10px; width: 38px; height: 38px; font-size: 29px; }

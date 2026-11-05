@@ -1,5 +1,5 @@
 {
   "extends": "./tsconfig.json",
-  "compilerOptions": { "noEmit": false, "outDir": ".test-build", "rootDir": "src/core", "types": [] },
-  "include": ["src/core/battle.ts"]
+  "compilerOptions": { "noEmit": false, "outDir": ".test-build", "rootDir": "src", "types": [] },
+  "include": ["src/core/battle.ts", "src/ui/placement-state.ts"]
 }

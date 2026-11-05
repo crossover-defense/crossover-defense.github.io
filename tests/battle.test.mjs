@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { Battle, inRange } from '../.test-build/battle.js';
+import { Battle, inRange } from '../.test-build/core/battle.js';
 
 const read = name => JSON.parse(readFileSync(new URL(`../src/data/${name}.json`, import.meta.url), 'utf8'));
 const roster = read('pokemon');

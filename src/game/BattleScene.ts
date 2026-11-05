@@ -16,13 +16,16 @@ function color(value: string): number { return Number.parseInt(value.slice(1), 1
 export class BattleScene extends Phaser.Scene {
   selectedPokemon: Pokemon | null = null;
   selectedUnit: number | null = null;
-  direction: Direction = 'east';
   paused = false;
   speed = 1;
+  placementActive = false;
+  placementTile: Point | null = null;
+  placementDirection: Direction | null = null;
   private accumulator = 0;
   private hover: Point | null = null;
   private overlay!: Phaser.GameObjects.Graphics;
   private actors!: Phaser.GameObjects.Graphics;
+  private preview!: Phaser.GameObjects.Graphics;
   private labels = new Map<number, Phaser.GameObjects.Text>();
   private effects: (Shot & { life: number })[] = [];
 
@@ -88,6 +91,7 @@ export class BattleScene extends Phaser.Scene {
     }
     this.overlay = this.add.graphics();
     this.actors = this.add.graphics();
+    this.preview = this.add.graphics();
     this.onRefresh();
   }
 
@@ -96,9 +100,41 @@ export class BattleScene extends Phaser.Scene {
       new Phaser.Geom.Point(x + 45, y + 28), new Phaser.Geom.Point(x - 29, y + 28)];
   }
 
+  /** HTML Pointer Events의 CSS 좌표를 현재 카메라의 논리 좌표로 바꿔 타일을 찾습니다. */
+  tileAtClient(clientX: number, clientY: number): Point | null {
+    if (!this.sys.isActive()) return null;
+    const rect = this.game.canvas.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0 || clientX < rect.left || clientX > rect.right || clientY < rect.top || clientY > rect.bottom) return null;
+    const world = this.cameras.main.getWorldPoint((clientX - rect.left) * this.scale.width / rect.width,
+      (clientY - rect.top) * this.scale.height / rect.height);
+    const rows = this.getBattle().stage.tiles;
+    // 위에 그려진 면부터 검사합니다. 높은 타일도 화면에 보이는 다각형 그대로 판정합니다.
+    for (let y = rows.length - 1; y >= 0; y--) {
+      const row = rows[y];
+      if (!row) continue;
+      for (let x = row.length - 1; x >= 0; x--) {
+        if (row[x] === ' ') continue;
+        const p = screen({ x, y }, row[x] === '#');
+        if (Phaser.Geom.Polygon.Contains(new Phaser.Geom.Polygon(this.diamond(p.x, p.y)), world.x, world.y)) return { x, y };
+      }
+    }
+    return null;
+  }
+
+  tileClientPosition(tile: Point): Point | null {
+    if (!this.sys.isActive()) return null;
+    const camera = this.cameras.main;
+    const rect = this.game.canvas.getBoundingClientRect();
+    const p = screen(tile, this.getBattle().stage.tiles[tile.y]?.[tile.x] === '#');
+    // 카메라는 회전 없이 논리 전장 중심(600,300)을 바라봅니다. HTML 방향 UI도 같은 배율을 사용합니다.
+    return { x: rect.left + (camera.width / 2 + (p.x - 600) * camera.zoom) * rect.width / this.scale.width,
+      y: rect.top + (camera.height / 2 + (p.y - 300) * camera.zoom) * rect.height / this.scale.height };
+  }
+
   clearBattle(): void {
     this.accumulator = 0; this.effects = []; this.selectedUnit = null;
     this.selectedPokemon = null; this.paused = false;
+    this.placementActive = false; this.placementTile = null; this.placementDirection = null;
     this.labels.forEach(label => label.destroy()); this.labels.clear();
   }
 
@@ -106,7 +142,9 @@ export class BattleScene extends Phaser.Scene {
     const battle = this.getBattle();
     // 고정 1/30초 틱: 렌더링 FPS가 달라도 동일한 전투 순서를 유지합니다.
     // 탭 복귀 시 누적 시간이 폭주하지 않도록 한 프레임 시간을 제한합니다.
-    if (!this.paused && battle.status === 'running') this.accumulator += Math.min(delta / 1000, 0.25) * this.speed;
+    // 조작용 슬로모션은 기존 배속을 덮어쓰지 않습니다. 취소/완료 시 원래 배속으로 복귀합니다.
+    const rate = this.placementActive ? 0.1 : this.speed;
+    if (!this.paused && battle.status === 'running') this.accumulator += Math.min(delta / 1000, 0.25) * rate;
     while (this.accumulator >= 1 / 30) {
       battle.step(1 / 30);
       this.effects.push(...battle.shots.map(shot => ({ ...shot, life: 0.18 })));
@@ -114,7 +152,7 @@ export class BattleScene extends Phaser.Scene {
     }
     this.renderRange(battle);
     this.renderActors(battle);
-    if (!this.paused) this.effects.forEach(effect => { effect.life -= delta / 1000; });
+    if (!this.paused) this.effects.forEach(effect => { effect.life -= delta / 1000 * rate; });
     this.effects = this.effects.filter(effect => effect.life > 0);
     for (const effect of this.effects) {
       const from = screen(effect.from, battle.stage.tiles[effect.from.y]?.[effect.from.x] === '#');
@@ -128,10 +166,26 @@ export class BattleScene extends Phaser.Scene {
 
   private renderRange(battle: Battle): void {
     this.overlay.clear();
+    this.preview.clear();
+    if (this.placementActive && this.selectedPokemon) {
+      const selected = this.selectedPokemon;
+      battle.stage.tiles.forEach((row, y) => [...row].forEach((tile, x) => {
+        if (battle.deploymentError(selected, x, y)) return;
+        const p = screen({ x, y }, tile === '#');
+        this.overlay.fillStyle(0x8cdeae, 0.2).fillPoints(this.diamond(p.x, p.y), true);
+        this.overlay.lineStyle(1, 0x8cdeae, 0.5).strokePoints(this.diamond(p.x, p.y), true);
+      }));
+      if (this.placementTile) {
+        const p = screen(this.placementTile, battle.stage.tiles[this.placementTile.y]?.[this.placementTile.x] === '#');
+        this.drawPokemon(p.x, p.y - 12, selected, this.preview);
+        const valid = !battle.deploymentError(selected, this.placementTile.x, this.placementTile.y);
+        this.preview.lineStyle(3, valid ? 0xa8e6bd : 0xed856f).strokePoints(this.diamond(p.x, p.y), true);
+      }
+    }
     const deployed = battle.units.find(unit => unit.id === this.selectedUnit);
     const pokemon = this.selectedPokemon ?? deployed?.pokemon;
-    const origin = this.selectedPokemon ? this.hover : deployed;
-    const direction = this.selectedPokemon ? this.direction : deployed?.direction;
+    const origin = this.selectedPokemon ? this.placementTile ?? this.hover : deployed;
+    const direction = this.selectedPokemon ? this.placementDirection : deployed?.direction;
     if (!pokemon || !origin || !direction) return;
     battle.stage.tiles.forEach((row, y) => [...row].forEach((tile, x) => {
       if (tile === ' ' || !inRange(origin, { x, y }, direction, pokemon.range, pokemon.width)) return;
@@ -183,8 +237,7 @@ export class BattleScene extends Phaser.Scene {
   }
 
   /** 외부 IP 이미지 대신 디버깅용 도형 표식을 직접 그립니다. */
-  private drawPokemon(x: number, y: number, pokemon: Pokemon): void {
-    const g = this.actors;
+  private drawPokemon(x: number, y: number, pokemon: Pokemon, g = this.actors): void {
     g.fillStyle(color(pokemon.color));
     if (pokemon.id === 'pikachu') {
       g.fillTriangle(x - 15, y - 12, x - 19, y - 43, x - 4, y - 21);

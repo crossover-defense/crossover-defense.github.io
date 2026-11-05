@@ -3,6 +3,9 @@ import { Battle } from './core/battle';
 import type { Direction, Pokemon, Stage } from './core/battle';
 import { BattleScene } from './game/BattleScene';
 import { bindDisplay } from './ui/display';
+import { PlacementState } from './ui/placement-state';
+import { bindPlacement } from './ui/placement';
+import type { PlacementController } from './ui/placement';
 import pokemonData from './data/pokemon.json';
 import stageData from './data/stage.json';
 import './style.css';
@@ -22,17 +25,16 @@ function element<T extends HTMLElement>(id: string): T {
 const status = element('status');
 const cards = new Map<string, HTMLButtonElement>();
 let lastUi = '';
+const placementState = new PlacementState();
+let placement: PlacementController | null = null;
 
 const scene = new BattleScene(() => battle, (x, y) => {
-  if (scene.selectedPokemon) {
-    const name = scene.selectedPokemon.name;
-    const error = battle.deploy(scene.selectedPokemon.id, x, y, scene.direction);
-    status.textContent = error ?? `${name} 배치 완료 · 배치된 포켓몬을 선택하면 범위 확인과 철수가 가능합니다.`;
-    if (!error) { scene.selectedPokemon = null; scene.selectedUnit = battle.units.at(-1)?.id ?? null; }
-  } else {
+  if (placementState.phase === 'dragging') {
+    placement?.reserve(x, y);
+  } else if (!placementState.active) {
     const unit = battle.units.find(item => item.x === x && item.y === y);
     scene.selectedUnit = unit?.id ?? null;
-    status.textContent = unit ? `${unit.pokemon.name} 선택 · 철수 시 코스트는 반환되지 않습니다.` : '배치할 포켓몬을 아래에서 선택하세요.';
+    status.textContent = unit ? `${unit.pokemon.name} 선택 · 철수 시 코스트는 반환되지 않습니다.` : '하단 포켓몬을 타일까지 드래그해 주세요.';
   }
   refresh();
 }, refresh);
@@ -52,20 +54,18 @@ for (const pokemon of roster) {
   button.style.setProperty('--pokemon-color', pokemon.color);
   button.setAttribute('aria-label', `${pokemon.name}, ${pokemon.role}, 코스트 ${pokemon.cost}`);
   button.innerHTML = `<div class="card-top"><span>${pokemon.element}</span><strong>${pokemon.cost}<small> DP</small></strong></div><div class="portrait">${portrait(pokemon.id, pokemon.color)}</div><div class="card-name"><strong>${pokemon.name}</strong><span>${pokemon.role}</span></div><span class="card-state">선택 가능</span>`;
-  button.addEventListener('click', () => {
-    scene.selectedPokemon = scene.selectedPokemon?.id === pokemon.id ? null : pokemon;
-    scene.selectedUnit = null;
-    status.textContent = scene.selectedPokemon ? `${pokemon.name} 선택 · 방향을 고르고 ${pokemon.terrain === 'high' ? '높은' : '지상'} 타일을 누르세요. 노란 영역은 공격 범위입니다.` : '선택을 해제했습니다.';
-    refresh();
-  });
   element('roster').append(button); cards.set(pokemon.id, button);
 }
 
 function refresh(): void {
+  if ((battle.status === 'won' || battle.status === 'lost') && placementState.active) {
+    placement?.cancel('전투가 종료되어 배치 예약을 취소했습니다.');
+  }
+  placement?.render();
   // 상태가 변했을 때만 DOM을 갱신해 Phaser의 매 프레임 렌더링과 비용을 분리합니다.
   const key = [battle.status, Math.floor(battle.cost), battle.life, battle.defeated, battle.leaked,
     Math.floor(battle.elapsed), battle.units.map(unit => `${unit.id}:${Math.ceil(unit.hp)}`).join(','),
-    scene.selectedPokemon?.id, scene.selectedUnit, scene.direction, scene.paused, scene.speed].join('|');
+    scene.selectedPokemon?.id, scene.selectedUnit, scene.paused, scene.speed, placementState.phase, placementState.direction].join('|');
   if (key === lastUi) return;
   lastUi = key;
   element('life').textContent = String(battle.life);
@@ -74,7 +74,8 @@ function refresh(): void {
   element('time').textContent = `${String(Math.floor(battle.elapsed / 60)).padStart(2, '0')}:${String(Math.floor(battle.elapsed % 60)).padStart(2, '0')}`;
   element('cost').textContent = String(Math.floor(battle.cost));
   element('slots').textContent = `${battle.units.length} / ${stage.deployLimit}`;
-  element('speed').textContent = `${scene.speed}×`;
+  element('speed').textContent = placementState.active ? '0.1×' : `${scene.speed}×`;
+  element<HTMLButtonElement>('speed').disabled = placementState.active;
   element('pause').textContent = scene.paused ? '계속 진행' : '일시정지';
   element<HTMLButtonElement>('pause').disabled = battle.status !== 'running';
   const deployed = battle.units.find(unit => unit.id === scene.selectedUnit);
@@ -85,8 +86,8 @@ function refresh(): void {
     : '높은 타일에는 원거리, 지상에는 저지 유닛을 배치할 수 있습니다.';
   element('retreat').hidden = !deployed || battle.status === 'won' || battle.status === 'lost';
   document.querySelectorAll<HTMLButtonElement>('[data-direction]').forEach(button => {
-    button.setAttribute('aria-pressed', String(button.dataset.direction === scene.direction));
-    button.disabled = !!deployed;
+    button.setAttribute('aria-pressed', String(button.dataset.direction === placementState.direction));
+    button.disabled = placementState.phase !== 'direction';
   });
   for (const pokemon of roster) {
     const card = cards.get(pokemon.id);
@@ -103,10 +104,12 @@ function refresh(): void {
   const won = battle.status === 'won';
   element('overlay-tag').textContent = battle.status === 'ready' ? 'OPERATION READY' : won ? 'MISSION COMPLETE' : 'MISSION FAILED';
   element('overlay-title').textContent = battle.status === 'ready' ? '방어선을 구축하세요' : won ? '작전 성공' : '방어선 돌파';
-  element('overlay-description').textContent = battle.status === 'ready' ? '미리 배치하거나 시작 후 배치할 수 있습니다.' : `격파 ${battle.defeated} · 통과 ${battle.leaked} · 남은 방어 수치 ${battle.life}`;
+  element('overlay-description').textContent = battle.status === 'ready' ? '포켓몬을 타일로 드래그한 뒤 방향을 끌어 지정하세요.' : `격파 ${battle.defeated} · 통과 ${battle.leaked} · 남은 방어 수치 ${battle.life}`;
+  element('battle-overlay').classList.toggle('placement-hidden', placementState.active);
   element('start').textContent = battle.status === 'ready' ? '작전 시작 →' : '다시 도전 →';
 }
 function reset(): void {
+  placement?.cancel('');
   battle = new Battle(stage, roster); scene.clearBattle(); lastUi = '';
   status.textContent = '초기 상태로 돌아왔습니다. 포켓몬을 배치하고 작전을 시작하세요.';
   refresh();
@@ -122,10 +125,10 @@ element('retreat').addEventListener('click', () => {
   if (scene.selectedUnit !== null) battle.retreat(scene.selectedUnit);
   scene.selectedUnit = null; status.textContent = '철수했습니다. 코스트는 반환되지 않습니다.'; refresh();
 });
-element('cancel').addEventListener('click', () => { scene.selectedPokemon = null; scene.selectedUnit = null; refresh(); });
+element('cancel').addEventListener('click', () => { placement?.cancel(); scene.selectedUnit = null; refresh(); });
 document.querySelectorAll<HTMLButtonElement>('[data-direction]').forEach(button => button.addEventListener('click', () => {
   const direction = button.dataset.direction;
-  if (direction === 'east' || direction === 'west' || direction === 'south' || direction === 'north') scene.direction = direction satisfies Direction;
+  if (direction === 'east' || direction === 'west' || direction === 'south' || direction === 'north') placement?.confirmDirection(direction satisfies Direction);
   refresh();
 }));
 
@@ -136,5 +139,10 @@ const game = new Phaser.Game({
   scene: [scene],
 });
 const unbindDisplay = bindDisplay(game, element('game'), element<HTMLButtonElement>('fullscreen'), status);
-if (import.meta.hot) import.meta.hot.dispose(() => { unbindDisplay(); game.destroy(true); });
+placement = bindPlacement(placementState, scene, () => battle, roster, cards, {
+  field: element('battlefield'), overlay: element('placement-overlay'), compass: element('placement-compass'),
+  cancel: element<HTMLButtonElement>('placement-cancel'), ghost: element('placement-ghost'),
+  hint: element('placement-hint'), status,
+}, refresh);
+if (import.meta.hot) import.meta.hot.dispose(() => { placement?.dispose(); unbindDisplay(); game.destroy(true); });
 
