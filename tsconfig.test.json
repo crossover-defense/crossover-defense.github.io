@@ -1,0 +1,5 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": { "noEmit": false, "outDir": ".test-build", "rootDir": "src/core", "types": [] },
+  "include": ["src/core/battle.ts"]
+}

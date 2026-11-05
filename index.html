@@ -1,0 +1,30 @@
+﻿<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Crossover Defense 초기 전투 프로토타입" />
+  <title>Crossover Defense · 전투 훈련</title>
+</head>
+<body>
+  <main class="battle-shell">
+    <header class="topbar">
+      <div class="operation"><span class="eyebrow">CROSSOVER DEFENSE / PROTOTYPE</span><h1>01 <span>FIRST CONTACT</span></h1><p>외곽 훈련 구역 <span class="tag">훈련 작전</span></p></div>
+      <div class="telemetry"><div><span>방어 수치</span><strong id="life">5</strong></div><div><span>처리한 적</span><strong id="enemies">0 / 16</strong></div><div><span>작전 시간</span><strong id="time">00:00</strong></div></div>
+      <div class="controls"><button id="speed" aria-label="전투 속도 변경">1×</button><button id="pause">일시정지</button><button id="restart" class="muted">재시작</button></div>
+    </header>
+    <section class="battlefield" aria-label="전투 영역">
+      <div id="game" tabindex="0" aria-label="전술 맵. 아래 포켓몬과 방향을 선택한 뒤 타일을 클릭하거나 터치해 배치합니다."></div>
+      <div class="field-caption"><span><i class="dot red"></i>진입 지점</span><span><i class="dot blue"></i>방어 지점</span><span>11 × 6 / TACTICAL GRID</span></div>
+      <div id="battle-overlay" class="battle-overlay"><div><span class="eyebrow" id="overlay-tag">OPERATION READY</span><h2 id="overlay-title">방어선을 구축하세요</h2><p id="overlay-description">포켓몬과 방향을 선택하고 타일에 배치하세요.<br>준비가 되면 작전을 시작합니다.</p><button id="start" class="primary">작전 시작 <span>→</span></button></div></div>
+    </section>
+    <section class="deployment" aria-label="포켓몬 배치">
+      <div class="deployment-heading"><div><span class="eyebrow">DEPLOYMENT</span><h2>배치 대기 <small id="slots">0 / 4</small></h2></div><div class="cost"><span>배치 코스트 <small>+1 / 초</small></span><strong id="cost">24</strong><small>/ 99</small></div></div>
+      <div class="deployment-body"><div id="roster" class="roster"></div><aside class="selection-panel"><div class="selection-title"><strong id="selection-name">포켓몬을 선택하세요</strong><button id="cancel" class="text-button">선택 해제</button></div><p id="selection-detail">높은 타일에는 원거리, 지상에는 저지 유닛을 배치할 수 있습니다.</p><div class="direction-row"><span>배치 방향</span><div class="directions" role="group" aria-label="배치 방향"><button data-direction="west" aria-label="왼쪽">←</button><button data-direction="north" aria-label="위쪽">↑</button><button data-direction="south" aria-label="아래쪽">↓</button><button data-direction="east" aria-label="오른쪽" aria-pressed="true">→</button></div><button id="retreat" hidden>철수</button></div></aside></div>
+      <p id="status" role="status">포켓몬 선택 → 방향 선택 → 타일 배치 · 준비 중에도 배치할 수 있습니다.</p>
+    </section>
+    <footer><span><i class="dot green"></i> 초기 전투 프로토타입</span><span>임시 능력치 · 속성 상성 / 덱 / 스킬 미적용</span></footer>
+  </main>
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+node_modules/
+.npm-cache/
+dist/
+.test-build/
+learning/
+.env
+.env.*
+!.env.example
+*.local
+*.log
+.DS_Store
+Thumbs.db

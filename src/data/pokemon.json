@@ -1,0 +1,6 @@
+[
+  {"id":"pikachu","name":"피카츄","role":"원거리","element":"전기","color":"#f5cc55","terrain":"high","cost":12,"hp":400,"attack":115,"interval":1.1,"range":3,"width":1,"block":0},
+  {"id":"bulbasaur","name":"이상해씨","role":"지상 · 저지 2","element":"풀","color":"#8ccaa1","terrain":"ground","cost":10,"hp":950,"attack":65,"interval":1.3,"range":1,"width":0,"block":2},
+  {"id":"charmander","name":"파이리","role":"원거리","element":"불꽃","color":"#ee9c70","terrain":"high","cost":14,"hp":400,"attack":155,"interval":1.5,"range":3,"width":1,"block":0},
+  {"id":"squirtle","name":"꼬부기","role":"지상 · 저지 3","element":"물","color":"#85c7e7","terrain":"ground","cost":12,"hp":1400,"attack":50,"interval":1.4,"range":1,"width":0,"block":3}
+]
