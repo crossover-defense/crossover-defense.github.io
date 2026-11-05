@@ -30,6 +30,16 @@ export class BattleScene extends Phaser.Scene {
     private readonly onRefresh: () => void) { super('battle'); }
 
   create(): void {
+    // 논리 전장(1200×600)을 유지하면서 화면 크기만 변경합니다. 입력 좌표도 카메라가 역변환합니다.
+    const fitCamera = (): void => {
+      const { width, height } = this.scale.gameSize;
+      this.cameras.main.setSize(width, height);
+      this.cameras.main.setZoom(Math.min(width / 1200, height / 600));
+      this.cameras.main.centerOn(600, 300);
+    };
+    this.scale.on(Phaser.Scale.Events.RESIZE, fitCamera);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.scale.off(Phaser.Scale.Events.RESIZE, fitCamera));
+    fitCamera();
     const battle = this.getBattle();
     const terrain = this.add.graphics();
     // 배경 눈금은 장식이며 전투 판정과는 관계없습니다.

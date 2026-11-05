@@ -28,6 +28,8 @@ npm run learning:check
 
 모바일은 가로 방향을 권장합니다. 임시 포켓몬 표식은 직접 그린 도형이며 공식 이미지 다운로드가 필요하지 않습니다.
 
+화면은 브라우저의 가용 공간에 자동으로 맞춰집니다. 상단의 **전체화면** 버튼으로 진입하고 **전체화면 해제** 또는 Esc로 돌아옵니다. 전장 비율은 유지되므로 화면 비율에 따라 여백이 생길 수 있습니다. 작은 창에서는 하단 배치 패널 내부를 스크롤할 수 있습니다. 전체화면 미지원 환경은 버튼이 비활성화됩니다.
+
 ## 임시 규칙과 데이터
 
 - 맵 11×6, 적 16개체, 초기 방어 수치 5, 동시 배치 4개체.
@@ -47,6 +49,7 @@ npm run learning:check
 | src/main.ts | HTML 입력과 전투 상태/Phaser 연결 |
 | src/core/battle.ts | Phaser와 독립적인 배치·이동·저지·공격·승패 |
 | src/game/BattleScene.ts | 타일 좌표 변환, 렌더링, 타일 입력, 고정 시간 업데이트 |
+| src/ui/display.ts | 부모 크기 추적·Canvas 크기 조정·전체화면 전환 |
 | src/data/stage.json | 타일, 이동 경로, 적과 전투 임시 수치 |
 | src/data/pokemon.json | 포켓몬의 역할·지형·공격·체력·범위 |
 | src/game/BootScene.ts / src/data/demo.json | 보관된 최초 실행 확인 예제(현재 미사용) |

@@ -2,6 +2,7 @@
 
 - 목적: PC/모바일 웹 실시간 카드 디펜스. TypeScript, Phaser, HTML/CSS, Vite, JSON을 사용하며 GitHub Pages에 정적 배포한다.
 - `src/main.ts`: 실행 진입점, `src/game/`: Phaser Scene·렌더링·입력, `src/core/`: Phaser/DOM과 독립적인 규칙, `src/data/`: 콘텐츠 JSON, `src/style.css`: HTML UI.
+- `src/ui/`: 화면 크기·전체화면 등 브라우저 UI 처리. 전투 규칙은 넣지 않는다. feature/*는 필요할 때만 사용하며 1인 개발의 기본 흐름은 develop → main이다.
 - `learning/`: 로컬 학습 자료(Git 제외). 향후 개발용 에디터는 루트 `tools/`에 필요할 때 추가하고 게임 진입점에서 import하지 않는다.
 - TypeScript는 strict 모드를 유지한다. `any`와 불필요한 타입 단언을 피하고 타입 전용 import는 `import type`을 쓴다. 타입/클래스는 PascalCase, 함수/변수는 camelCase로 작성한다.
 - 새 코드와 수정 코드에는 디버깅에 도움이 되는 한글 주석을 작성한다. 상태 변경 이유, 좌표·시간 단위, 판정 순서와 임시 규칙을 설명하며 자명한 문법 설명은 피한다.

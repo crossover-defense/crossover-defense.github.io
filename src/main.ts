@@ -2,6 +2,7 @@
 import { Battle } from './core/battle';
 import type { Direction, Pokemon, Stage } from './core/battle';
 import { BattleScene } from './game/BattleScene';
+import { bindDisplay } from './ui/display';
 import pokemonData from './data/pokemon.json';
 import stageData from './data/stage.json';
 import './style.css';
@@ -130,8 +131,10 @@ document.querySelectorAll<HTMLButtonElement>('[data-direction]').forEach(button 
 
 const game = new Phaser.Game({
   type: Phaser.AUTO, parent: 'game', backgroundColor: '#18232c',
-  scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH, width: 1200, height: 600 },
+  // Canvas는 가용 공간 전체를 사용하고, 전장의 비율 유지는 Scene의 카메라가 담당합니다.
+  scale: { mode: Phaser.Scale.RESIZE, width: 1200, height: 600 },
   scene: [scene],
 });
-if (import.meta.hot) import.meta.hot.dispose(() => game.destroy(true));
+const unbindDisplay = bindDisplay(game, element('game'), element<HTMLButtonElement>('fullscreen'), status);
+if (import.meta.hot) import.meta.hot.dispose(() => { unbindDisplay(); game.destroy(true); });
 
